@@ -1,5 +1,5 @@
 
-import { Pass } from "../postprocessing/Pass.js";
+import { Pass } from "./Pass.js";
 
 var MaskPass = function ( scene, camera ) {
 

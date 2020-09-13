@@ -7,4 +7,25 @@ content {
 	left: 0;
 	right: 0;
 	bottom: 0;
+	background-image: repeating-linear-gradient(90deg, #247ce1 0px, #247ce1 1px, transparent 1px, transparent 104px),
+						repeating-linear-gradient(0deg, #247ce1 0px, #247ce1 1px, transparent 1px, transparent 104px),
+						repeating-linear-gradient(0deg, #1978e0 0px, #1978e0 1px, transparent 1px, transparent 26px),
+						repeating-linear-gradient(90deg, #1978e0 0px, #1978e0 1px, transparent 1px, transparent 26px),
+						linear-gradient(0deg, #006ad8, #006dde);
+
+	&:before {
+		content: "";
+		position: absolute;
+		top: 15px;
+		left: 15px;
+		right: 15px;
+		bottom: 15px;
+		border: 2px solid #fff;
+		z-index: 1;
+	}
+
+	canvas {
+		position: relative;
+		z-index: 2;
+	}
 }
