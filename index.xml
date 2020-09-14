@@ -1,4 +1,7 @@
 <Application>
+	<Build>
+		<task action="skip" source="src/js/bundle.js" destination="public/js/bundle.js"/>
+	</Build>
 	<Head>
 		<meta name="id" value="arcad"/>
 		<meta name="title" value="Arcad" version="1.0"/>

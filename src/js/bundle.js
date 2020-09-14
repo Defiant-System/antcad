@@ -5,7 +5,7 @@ import { EffectComposer } from './modules/postprocessing/EffectComposer.js';
 import { RenderPass } from './modules/postprocessing/RenderPass.js';
 import { OutlinePass } from './modules/postprocessing/OutlinePass.js';
 
-export {
+module.exports = {
 	THREE,
 	OrbitControls,
 	EffectComposer,
