@@ -30,7 +30,7 @@ let renderer,
 	camera,
 	scene,
 	opacity = 0.85,
-	lit = true,
+	lit = false,
 	thickness = 1.5,
 	useThickLines = true,
 	lineColor = 0xbbddff,
@@ -71,7 +71,7 @@ const arcad = {
 				break;
 			case "add-model":
 				model = new THREE.Group();
-				
+
 				switch (event.model) {
 					case "cylinder":
 						geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
@@ -107,7 +107,7 @@ const arcad = {
 				// camera
 				camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 2000);
 				camera.position.set(1, 3, 8);
-				scene.add( camera );
+				scene.add(camera);
 				
 				// renderer
 				renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -193,7 +193,7 @@ const arcad = {
 				
 				// init conditional model
 				edges.CONDITIONAL = edges.ORIGINAL.clone();
-				scene.add( edges.CONDITIONAL );
+				scene.add(edges.CONDITIONAL);
 				edges.CONDITIONAL.visible = false;
 
 				meshes = [];
@@ -204,86 +204,82 @@ const arcad = {
 
 					// Remove everything but the position attribute
 					let mergedGeom = mesh.geometry.clone();
-					for ( let key in mergedGeom.attributes ) {
-						if ( key !== 'position' ) {
-							mergedGeom.deleteAttribute( key );
+					for (let key in mergedGeom.attributes) {
+						if (key !== 'position') {
+							mergedGeom.deleteAttribute(key);
 						}
 					}
 
 					// Create the conditional edges geometry and associated material
-					let geomUtil = BufferGeometryUtils.mergeVertices( mergedGeom );
-					let lineGeom = new ConditionalEdgesGeometry( geomUtil );
-					let material = new THREE.ShaderMaterial( ConditionalEdgesShader );
-					material.uniforms.diffuse.value.set( lineColor );
+					let geomUtil = BufferGeometryUtils.mergeVertices(mergedGeom);
+					let lineGeom = new ConditionalEdgesGeometry(geomUtil);
+					let material = new THREE.ShaderMaterial(ConditionalEdgesShader);
+					material.uniforms.diffuse.value.set(lineColor);
 
 					// Create the line segments objects and replace the mesh
-					let line = new THREE.LineSegments( lineGeom, material );
-					line.position.copy( mesh.position );
-					line.scale.copy( mesh.scale );
-					line.rotation.copy( mesh.rotation );
+					let line = new THREE.LineSegments(lineGeom, material);
+					line.position.copy(mesh.position);
+					line.scale.copy(mesh.scale);
+					line.rotation.copy(mesh.rotation);
 
-					let thickLineGeom = new ConditionalLineSegmentsGeometry().fromConditionalEdgesGeometry( lineGeom );
-					let thickLineMat = new ConditionalLineMaterial( { color: lineColor, linewidth: 2 } );
-					let thickLines = new LineSegments2( thickLineGeom, thickLineMat );
-					thickLines.position.copy( mesh.position );
-					thickLines.scale.copy( mesh.scale );
-					thickLines.rotation.copy( mesh.rotation );
+					let thickLineGeom = new ConditionalLineSegmentsGeometry().fromConditionalEdgesGeometry(lineGeom);
+					let thickLineMat = new ConditionalLineMaterial({ color: lineColor, linewidth: 2 });
+					let thickLines = new LineSegments2(thickLineGeom, thickLineMat);
+					thickLines.position.copy(mesh.position);
+					thickLines.scale.copy(mesh.scale);
+					thickLines.rotation.copy(mesh.rotation);
 
-					parent.remove( mesh );
-					parent.add( line );
-					parent.add( thickLines );
+					parent.remove(mesh);
+					parent.add(line);
+					parent.add(thickLines);
 				});
 
 				Self.dispatch({ type: "pre-process-models" });
 				break;
 			case "pre-process-models":
-				if ( edges.CONDITIONAL ) {
+				if (edges.CONDITIONAL) {
 					edges.CONDITIONAL.visible = true;
-					edges.CONDITIONAL.traverse( c => {
-						if ( c.material && c.material.resolution ) {
-							renderer.getSize( c.material.resolution );
-							c.material.resolution.multiplyScalar( window.devicePixelRatio );
+					edges.CONDITIONAL.traverse(c => {
+						if (c.material && c.material.resolution) {
+							renderer.getSize(c.material.resolution);
+							c.material.resolution.multiplyScalar(window.devicePixelRatio);
 							c.material.linewidth = thickness;
 						}
-						if ( c.material ) {
+						if (c.material) {
 							c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
 						}
 					} );
 				}
-
-				if ( edges.MODEL ) {
-					edges.MODEL.traverse( c => {
-						if ( c.material && c.material.resolution ) {
-							renderer.getSize( c.material.resolution );
-							c.material.resolution.multiplyScalar( window.devicePixelRatio );
+				if (edges.MODEL) {
+					edges.MODEL.traverse(c => {
+						if (c.material && c.material.resolution) {
+							renderer.getSize(c.material.resolution);
+							c.material.resolution.multiplyScalar(window.devicePixelRatio);
 							c.material.linewidth = thickness;
 						}
-						if ( c.material ) {
+						if (c.material) {
 							c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
 						}
 					} );
 				}
-
-				if ( edges.BACKGROUND ) {
+				if (edges.BACKGROUND) {
 					edges.BACKGROUND.visible = ! lit;
-					edges.BACKGROUND.traverse( c => {
-						if ( c.isMesh ) {
+					edges.BACKGROUND.traverse(c => {
+						if (c.isMesh) {
 							c.material.transparent = opacity !== 1.0;
 							c.material.opacity = opacity;
 						}
 					} );
 				}
-
-				if ( edges.SHADOW ) {
+				if (edges.SHADOW) {
 					edges.SHADOW.visible = lit;
-					edges.SHADOW.traverse( c => {
-						if ( c.isMesh ) {
+					edges.SHADOW.traverse(c => {
+						if (c.isMesh) {
 							c.material.transparent = opacity !== 1.0;
 							c.material.opacity = opacity;
 						}
 					} );
 				}
-
 				Self.render();
 				break;
 		}
