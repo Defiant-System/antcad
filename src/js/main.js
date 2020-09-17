@@ -1,6 +1,7 @@
 
 let THREE,
 	OrbitControls,
+	OBJLoader2,
 	BufferGeometryUtils,
 	LineSegmentsGeometry,
 	LineSegments2,
@@ -14,6 +15,7 @@ let THREE,
 window.fetch("~/js/bundle.js").then(lib => {
 	THREE = lib.THREE;
 	OrbitControls = lib.OrbitControls;
+	OBJLoader2 = lib.OBJLoader2;
 	BufferGeometryUtils = lib.BufferGeometryUtils;
 	LineSegmentsGeometry = lib.LineSegmentsGeometry;
 	LineSegments2 = lib.LineSegments2;
@@ -50,6 +52,7 @@ const arcad = {
 	},
 	dispatch(event) {
 		let Self = arcad,
+			loader,
 			light,
 			model,
 			geometry,
@@ -81,12 +84,12 @@ const arcad = {
 			case "init-world":
 				Self.dispatch({ type: "set-up-world" });
 
-				// cylinder icosahedron cone
-				Self.dispatch({ type: "add-model", model: "cylinder" });
+				//Self.dispatch({ type: "add-primitive", model: "cylinder" });
+				Self.dispatch({ type: "load-model", path: "~/models/lego.obj" });
 
 				Self.dispatch({ type: "pre-process-models" });
 				break;
-			case "add-model":
+			case "add-primitive":
 				model = new THREE.Group();
 
 				switch (event.model) {
@@ -108,37 +111,27 @@ const arcad = {
 					case "dodecahedron":
 						geometry = new THREE.DodecahedronBufferGeometry(2);
 						break;
-					case "lego":
-						break;
 				}
 
 				mesh = new THREE.Mesh(geometry);
 				model.add(mesh);
-				model.children[0].geometry.computeBoundingBox();
+				//model.children[0].geometry.computeBoundingBox();
 				edges.ORIGINAL = model;
 				break;
-			case "add-lego":
+			case "load-model":
 				loader = new OBJLoader2();
 				//loader.setLogging(true, true);
-				loader.load('~/models/pipe.obj', (object) => {
+				loader.load(event.path, object => {
+					object.traverse(child => {
+						if (child instanceof THREE.Mesh) {
+							model = new THREE.Group();
+							model.add(child);
+							//model.children[0].geometry.computeBoundingBox();
+							edges.ORIGINAL = model;
 
-					// object.traverse(child => {
-					// 	if (child instanceof THREE.Mesh) {
-
-					// 		child.material = new THREE.MeshPhongMaterial({
-					// 			color: 0x0066dd,
-					// 		});
-
-					// 		geometry = new THREE.EdgesGeometry(child.geometry);
-					// 		material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: .25 });
-					// 		wireframe = new THREE.LineSegments(geometry, material);
-							
-					// 		//child.add(wireframe);
-					// 	}
-					// });
-
-					// scene.add(object);
-					// Self.render();
+							Self.dispatch({ type: "pre-process-models" });
+						}
+					});
 				});
 				break;
 			case "set-up-world":
@@ -168,11 +161,13 @@ const arcad = {
 
 				// controls
 				let controls = new OrbitControls(camera, renderer.domElement);
-				controls.minDistance = 9;
+				controls.minDistance = 5;
 				controls.maxDistance = 15;
 				controls.addEventListener("change", Self.render);
 				break;
 			case "pre-process-models":
+				if (!edges.ORIGINAL) return;
+
 				// init edges model
 				edges.MODEL = edges.ORIGINAL.clone();
 				scene.add(edges.MODEL);
