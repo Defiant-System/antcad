@@ -1,3 +1,8 @@
+/**
+ * @author WestLangley / http://github.com/WestLangley
+ *
+ */
+
 import {
 	InstancedInterleavedBuffer,
 	InterleavedBufferAttribute,
@@ -7,18 +12,18 @@ import {
 	Mesh,
 	Vector3,
 	Vector4
-} from "../three.module.js";
+} from "../../three.module.js";
 import { LineSegmentsGeometry } from "./LineSegmentsGeometry.js";
 import { LineMaterial } from "./LineMaterial.js";
 
 var LineSegments2 = function ( geometry, material ) {
 
-	if ( geometry === undefined ) geometry = new LineSegmentsGeometry();
-	if ( material === undefined ) material = new LineMaterial( { color: Math.random() * 0xffffff } );
-
-	Mesh.call( this, geometry, material );
+	Mesh.call( this );
 
 	this.type = 'LineSegments2';
+
+	this.geometry = geometry !== undefined ? geometry : new LineSegmentsGeometry();
+	this.material = material !== undefined ? material : new LineMaterial( { color: Math.random() * 0xffffff } );
 
 };
 

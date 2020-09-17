@@ -1,310 +1,270 @@
 
-let THREE;
-let OrbitControls;
-let OBJLoader2;
+let THREE,
+	OrbitControls,
+	BufferGeometryUtils,
+	LineSegmentsGeometry,
+	LineSegments2,
+	LineMaterial,
+	ConditionalEdgesGeometry,
+	ConditionalEdgesShader,
+	ConditionalLineSegmentsGeometry,
+	ConditionalLineMaterial;
 
-let composer,
-	renderer,
+// import libs
+window.fetch("~/js/bundle.js").then(lib => {
+	THREE = lib.THREE;
+	OrbitControls = lib.OrbitControls;
+	BufferGeometryUtils = lib.BufferGeometryUtils;
+	LineSegmentsGeometry = lib.LineSegmentsGeometry;
+	LineSegments2 = lib.LineSegments2;
+	LineMaterial = lib.LineMaterial;
+	ConditionalEdgesGeometry = lib.ConditionalEdgesGeometry;
+	ConditionalEdgesShader = lib.ConditionalEdgesShader;
+	ConditionalLineSegmentsGeometry = lib.ConditionalLineSegmentsGeometry;
+	ConditionalLineMaterial = lib.ConditionalLineMaterial;
+	// init applications
+	arcad.dispatch({ type: "init-world" });
+});
+
+let renderer,
 	camera,
-	scene;
-
-
-var conditionalLineVertShader = /* glsl */`
-
-attribute vec3 control0;
-attribute vec3 control1;
-attribute vec3 direction;
-
-varying float discardFlag;
-
-#include <common>
-#include <color_pars_vertex>
-#include <fog_pars_vertex>
-#include <logdepthbuf_pars_vertex>
-#include <clipping_planes_pars_vertex>
-
-void main() {
-
-#include <color_vertex>
-
-vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-gl_Position = projectionMatrix * mvPosition;
-
-// Transform the line segment ends and control points into camera clip space
-vec4 c0 = projectionMatrix * modelViewMatrix * vec4( control0, 1.0 );
-vec4 c1 = projectionMatrix * modelViewMatrix * vec4( control1, 1.0 );
-vec4 p0 = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-vec4 p1 = projectionMatrix * modelViewMatrix * vec4( position + direction, 1.0 );
-
-c0.xy /= c0.w;
-c1.xy /= c1.w;
-p0.xy /= p0.w;
-p1.xy /= p1.w;
-
-// Get the direction of the segment and an orthogonal vector
-vec2 dir = p1.xy - p0.xy;
-vec2 norm = vec2( -dir.y, dir.x );
-
-// Get control point directions from the line
-vec2 c0dir = c0.xy - p1.xy;
-vec2 c1dir = c1.xy - p1.xy;
-
-// If the vectors to the controls points are pointed in different directions away
-// from the line segment then the line should not be drawn.
-float d0 = dot( normalize( norm ), normalize( c0dir ) );
-float d1 = dot( normalize( norm ), normalize( c1dir ) );
-
-discardFlag = float( sign( d0 ) != sign( d1 ) );
-
-#include <logdepthbuf_vertex>
-#include <clipping_planes_vertex>
-#include <fog_vertex>
-
-}
-`;
-
-var conditionalLineFragShader = /* glsl */`
-
-uniform vec3 diffuse;
-varying float discardFlag;
-
-#include <common>
-#include <color_pars_fragment>
-#include <fog_pars_fragment>
-#include <logdepthbuf_pars_fragment>
-#include <clipping_planes_pars_fragment>
-
-void main() {
-
-if ( discardFlag > 0.5 ) discard;
-
-#include <clipping_planes_fragment>
-
-vec3 outgoingLight = vec3( 0.0 );
-vec4 diffuseColor = vec4( diffuse, 1.0 );
-
-#include <logdepthbuf_fragment>
-#include <color_fragment>
-
-outgoingLight = diffuseColor.rgb; // simple shader
-
-gl_FragColor = vec4( outgoingLight, diffuseColor.a );
-
-#include <premultiplied_alpha_fragment>
-#include <tonemapping_fragment>
-#include <encodings_fragment>
-#include <fog_fragment>
-
-}
-`;
-
-
-function box(w, h, d) {
-	w = w * 0.5,
-	h = h * 0.5,
-	d = d * 0.5;
-	var geometry = new THREE.BufferGeometry();
-	var position = [];
-	position.push(-w, -h, -d, -w, h, -d, -w, h, -d, w, h, -d, w, h, -d, w, -h, -d, w, -h, -d, -w, -h, -d, -w, -h, d, -w, h, d, -w, h, d, w, h, d, w, h, d, w, -h, d, w, -h, d, -w, -h, d, -w, -h, -d, -w, -h, d, -w, h, -d, -w, h, d, w, h, -d, w, h, d, w, -h, -d, w, -h, d);
-	//position.push( -w, -h, -d, -w, h, -d );
-	geometry.setAttribute( "position", new THREE.Float32BufferAttribute( position, 3 ) );
-	return geometry;
-}
+	scene,
+	opacity = 0.85,
+	edges = {
+		ORIGINAL: false,
+		MODEL: false,
+		BACKGROUND: false,
+		SHADOW: false,
+		CONDITIONAL: false
+	};
 
 
 const arcad = {
-	async init() {
+	init() {
 		// fast references
 		this.content = window.find("content");
-
-		// import libs
-		let lib = await window.fetch("~/js/bundle.js");
-		THREE = lib.THREE;
-		OrbitControls = lib.OrbitControls;
-		OBJLoader2 = lib.OBJLoader2;
-
-		this.dispatch({ type: "set-up-world" });
-		// this.dispatch({ type: "add-line-box" });
-		// this.dispatch({ type: "add-box" });
-		this.dispatch({ type: "add-line-cylinder" });
-		this.dispatch({ type: "add-cylinder" });
-		// this.dispatch({ type: "add-lego" });
-		this.render();
-	},
-	render() {
-		renderer.render(scene, camera);
-		//composer.render();
 	},
 	dispatch(event) {
 		let Self = arcad,
+			light,
+			model,
 			geometry,
 			material,
+			meshes,
 			mesh,
-			wireframe,
 			segments,
-			olmat,
-			ol;
+			el;
 
 		switch (event.type) {
-			// system events
-			case "window.open":
-				break;
 			// custom events
+			case "init-world":
+				Self.dispatch({ type: "set-up-world" });
+				Self.dispatch({ type: "add-cylinder" });
+
+				Self.dispatch({ type: "init-edges" });
+				Self.dispatch({ type: "init-background" });
+				Self.dispatch({ type: "init-conditional" });
+
+				Self.animate();
+				break;
 			case "set-up-world":
-				// camera
-				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 20000);
-				camera.position.set(-4, 6, 7);
 				// scene
 				scene = new THREE.Scene();
+				// scene.background = new THREE.Color( 0xeeeeee );
+				
+				// camera
+				camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 2000);
+				camera.position.set(1, 3, 8);
+				scene.add( camera );
+				
+				// renderer
+				renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				Self.content[0].appendChild(renderer.domElement);
 
 				// lights
-				let ambientLight = new THREE.AmbientLight(0xffffff);
-				scene.add(ambientLight);
-				let light = new THREE.DirectionalLight(0xFFFFFF, .15);
+				light = new THREE.AmbientLight(0xffffff);
+				scene.add(light);
+
+				light = new THREE.DirectionalLight(0xffffff, 1.0);
 				light.position.set(0, 10, 0);
 				light.target.position.set(-5, 0, 0);
 				scene.add(light);
 				scene.add(light.target);
 
-				// renderer
-				renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-				renderer.setPixelRatio(window.devicePixelRatio);
-				renderer.setSize(window.innerWidth, window.innerHeight);
-				this.content[0].appendChild(renderer.domElement);
-
 				// controls
-				let cameraControls = new OrbitControls(camera, renderer.domElement);
-				cameraControls.addEventListener("change", this.render);
+				let controls = new OrbitControls(camera, renderer.domElement);
+				controls.minDistance = 9;
+				controls.maxDistance = 15;
+				controls.addEventListener("change", Self.render);
 				break;
-			case "add-line-box":
-				geometry = box(3, 3, 3);
-				segments = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({
-					color: 0xffffff,
-				}));
-				segments.computeLineDistances();
+			case "init-edges":
+				edges.MODEL = edges.ORIGINAL.clone();
+				scene.add(edges.MODEL);
 
-				scene.add(segments);
-				break;
-			case "add-box":
-				geometry = new THREE.BoxBufferGeometry(2, 2, 2);
-				material = new THREE.MeshPhongMaterial({
-					color: 0x0066dd,
-					polygonOffset: true,
-					polygonOffsetFactor: 1,
-					polygonOffsetUnits: 1
+				meshes = [];
+				edges.MODEL.traverse(c => c.isMesh ? meshes.push(c) : null);
+
+				meshes.map(mesh => {
+					let parent = mesh.parent;
+					let lineGeom = new THREE.EdgesGeometry(mesh.geometry, 40);
+					let lineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+					let line = new THREE.LineSegments(lineGeom, lineMat);
+
+					line.position.copy(mesh.position);
+					line.scale.copy(mesh.scale);
+					line.rotation.copy(mesh.rotation);
+
+					let thickLineGeom = new LineSegmentsGeometry().fromEdgesGeometry(lineGeom);
+					let thickLineMat = new LineMaterial({ color: 0xffffff, linewidth: 3 });
+					let thickLines = new LineSegments2(thickLineGeom, thickLineMat);
+
+					thickLines.position.copy(mesh.position);
+					thickLines.scale.copy(mesh.scale);
+					thickLines.rotation.copy(mesh.rotation);
+					// hide this for now
+					// thickLines.visible = false;
+
+					parent.remove(mesh);
+					parent.add(line);
+					parent.add(thickLines);
 				});
-				mesh = new THREE.Mesh(geometry, material);
-
-				geometry = new THREE.EdgesGeometry(mesh.geometry, 40);
-				material = new THREE.LineBasicMaterial();
-				wireframe = new THREE.LineSegments(geometry, material);
-				mesh.add(wireframe);
-				scene.add(mesh);
-
-				mesh.position.x = 3;
-
-
-				// olmat = new THREE.MeshBasicMaterial({color : 0xffffff, side: THREE.BackSide});
-				// ol = new THREE.Mesh(mesh.geometry, olmat);
-				// ol.scale.multiplyScalar(1.0125);
-				// ol.position.x = 3;
-				// scene.add(ol);
-
 				break;
-			case "add-line-cylinder":
-				geometry = new THREE.CylinderGeometry(1, 1, 2, 20);
-				material = new THREE.MeshPhongMaterial({ color: 0x0066dd, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
-				mesh = new THREE.Mesh(geometry, material);
-				scene.add(mesh);
-
-				let edgesMaterial = new THREE.ShaderMaterial({
-					vertexShader: conditionalLineVertShader,
-					fragmentShader: conditionalLineFragShader,
-					uniforms: {
-						diffuse: { value: new THREE.Color( 0xffffff ) }
+			case "init-background":
+				edges.BACKGROUND = edges.ORIGINAL.clone();
+				edges.BACKGROUND.traverse(c => {
+					if (c.isMesh) {
+						c.material = new THREE.MeshStandardMaterial({ color: 0x0066dd, roughness: 1.0 });
+						c.material.polygonOffset = true;
+						c.material.polygonOffsetFactor = 1;
+						c.material.polygonOffsetUnits = 1;
+						c.receiveShadow = true;
+						c.renderOrder = 2;
 					}
 				});
+				scene.add(edges.BACKGROUND);
 
-				geometry = new THREE.EdgesGeometry(mesh.geometry);
-				console.log(mesh.geometry);
-				console.log(geometry);
-
-				let vertices = [],
-					control0 = [],
-					control1 = [],
-					directions = [];
-
-				mesh.geometry.vertices.map((v, i) => {
-					vertices.push(v.x, v.y, v.z);
-
-					let v2 = mesh.geometry.vertices[(i+1) % mesh.geometry.vertices.length];
-					vertices.push(v2.x, v2.y, v2.z);
+				edges.SHADOW = edges.ORIGINAL.clone();
+				edges.SHADOW.traverse(c => {
+					if (c.isMesh) {
+						c.material = new THREE.MeshBasicMaterial({ color: 0x0066dd });
+						c.material.polygonOffset = true;
+						c.material.polygonOffsetFactor = 1;
+						c.material.polygonOffsetUnits = 1;
+						c.renderOrder = 2;
+					}
 				});
+				scene.add(edges.SHADOW);
+				break;
+			case "init-conditional":
+				edges.CONDITIONAL = edges.ORIGINAL.clone();
+				scene.add( edges.CONDITIONAL );
+				edges.CONDITIONAL.visible = false;
 
-				geometry.setAttribute( "position", new THREE.Float32BufferAttribute( vertices, 3 ) );
-				// geometry.setAttribute( "control0", new THREE.Float32BufferAttribute( control0, 3, false ) );
-				// geometry.setAttribute( "control1", new THREE.Float32BufferAttribute( control1, 3, false ) );
-				// geometry.setAttribute( "direction", new THREE.Float32BufferAttribute( directions, 3, false ) );
+				meshes = [];
+				edges.CONDITIONAL.traverse(c => c.isMesh ? meshes.push(c) : null);
 
-				segments = new THREE.LineSegments(geometry, edgesMaterial);
-				segments.computeLineDistances();
+				meshes.map(mesh => {
+					let parent = mesh.parent;
 
-				scene.add(segments);
+					// Remove everything but the position attribute
+					let mergedGeom = mesh.geometry.clone();
+					for ( let key in mergedGeom.attributes ) {
+						if ( key !== 'position' ) {
+							mergedGeom.deleteAttribute( key );
+						}
+					}
+
+					// Create the conditional edges geometry and associated material
+					let geomUtil = BufferGeometryUtils.mergeVertices( mergedGeom );
+					let lineGeom = new ConditionalEdgesGeometry( geomUtil );
+					let material = new THREE.ShaderMaterial( ConditionalEdgesShader );
+					material.uniforms.diffuse.value.set( 0xffffff );
+
+					// Create the line segments objects and replace the mesh
+					let line = new THREE.LineSegments( lineGeom, material );
+					line.position.copy( mesh.position );
+					line.scale.copy( mesh.scale );
+					line.rotation.copy( mesh.rotation );
+
+					let thickLineGeom = new ConditionalLineSegmentsGeometry().fromConditionalEdgesGeometry( lineGeom );
+					let thickLineMat = new ConditionalLineMaterial( { color: 0xffffff, linewidth: 2 } );
+					let thickLines = new LineSegments2( thickLineGeom, thickLineMat );
+					thickLines.position.copy( mesh.position );
+					thickLines.scale.copy( mesh.scale );
+					thickLines.rotation.copy( mesh.rotation );
+
+					parent.remove( mesh );
+					parent.add( line );
+					parent.add( thickLines );
+				});
 				break;
 			case "add-cylinder":
+				model = new THREE.Group();
 				geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
-				material = new THREE.MeshPhongMaterial({
-					color: 0x0066dd,
-					shininess: false,
-					// premultipliedAlpha: true,
-					// depthWrite: false,
-					polygonOffset: true,
-					polygonOffsetFactor: 1,
-					polygonOffsetUnits: 1
-				});
-				mesh = new THREE.Mesh(geometry, material);
+				mesh = new THREE.Mesh(geometry);
+				model.add(mesh);
+				model.children[0].geometry.computeBoundingBox();
 
-				geometry = new THREE.EdgesGeometry(mesh.geometry, 40);
-				material = new THREE.LineBasicMaterial();
-				wireframe = new THREE.LineSegments(geometry, material);
-				mesh.add(wireframe);
-				scene.add(mesh);
-
-				mesh.position.x = -3;
-
-
-				// olmat = new THREE.MeshBasicMaterial({color : 0xffffff, side: THREE.BackSide});
-				// ol = new THREE.Mesh(mesh.geometry, olmat);
-				// ol.scale.multiplyScalar(1.0125);
-				// ol.position.x = -3;
-				// scene.add(ol);
-
-				break;
-			case "add-lego":
-				const objLoader = new OBJLoader2();
-				//objLoader.setLogging(true, true);
-				objLoader.load("~/models/man.obj", (object) => {
-
-					object.traverse(child => {
-						if (child instanceof THREE.Mesh) {
-							child.material = new THREE.MeshPhongMaterial({
-								color: 0x0066dd,
-								shininess: false,
-							});
-							child.position.y = -2;
-
-							geometry = new THREE.EdgesGeometry(child.geometry, 50);
-							material = new THREE.LineBasicMaterial();
-							wireframe = new THREE.LineSegments(geometry, material);
-							child.add(wireframe);
-						}
-					});
-
-					scene.add(object);
-					Self.render();
-				});
+				edges.ORIGINAL = model;
 				break;
 		}
+	},
+	animate() {
+		//requestAnimationFrame( this.animate );
+
+		if ( edges.CONDITIONAL ) {
+			edges.CONDITIONAL.visible = true;
+			edges.CONDITIONAL.traverse( c => {
+				if ( c.material && c.material.resolution ) {
+					renderer.getSize( c.material.resolution );
+					c.material.resolution.multiplyScalar( window.devicePixelRatio );
+					c.material.linewidth = 1;
+				}
+				if ( c.material ) {
+					c.visible = c.isLineSegments2 ? true : false;
+				}
+			} );
+		}
+
+		if ( edges.MODEL ) {
+			edges.MODEL.traverse( c => {
+				if ( c.material && c.material.resolution ) {
+					renderer.getSize( c.material.resolution );
+					c.material.resolution.multiplyScalar( window.devicePixelRatio );
+					c.material.linewidth = 1;
+				}
+				if ( c.material ) {
+					c.visible = c.isLineSegments2 ? true : false;
+				}
+			} );
+		}
+
+		if ( edges.BACKGROUND ) {
+			edges.BACKGROUND.visible = true;
+			edges.BACKGROUND.traverse( c => {
+				if ( c.isMesh ) {
+					c.material.transparent = opacity !== 1.0;
+					c.material.opacity = opacity;
+				}
+			} );
+		}
+
+		if ( edges.SHADOW ) {
+			edges.SHADOW.visible = false;
+			edges.SHADOW.traverse( c => {
+				if ( c.isMesh ) {
+					c.material.transparent = opacity !== 1.0;
+					c.material.opacity = opacity;
+				}
+			} );
+		}
+
+		this.render();
+	},
+	render() {
+		renderer.render(scene, camera);
 	}
 };
 

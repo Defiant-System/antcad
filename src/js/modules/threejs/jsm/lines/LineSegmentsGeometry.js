@@ -1,3 +1,8 @@
+/**
+ * @author WestLangley / http://github.com/WestLangley
+ *
+ */
+
 import {
 	Box3,
 	Float32BufferAttribute,
@@ -7,7 +12,7 @@ import {
 	Sphere,
 	Vector3,
 	WireframeGeometry
-} from "../three.module.js";
+} from "../../three.module.js";
 
 var LineSegmentsGeometry = function () {
 
@@ -42,7 +47,7 @@ LineSegmentsGeometry.prototype = Object.assign( Object.create( InstancedBufferGe
 
 			end.applyMatrix4( matrix );
 
-			start.needsUpdate = true;
+			start.data.needsUpdate = true;
 
 		}
 
