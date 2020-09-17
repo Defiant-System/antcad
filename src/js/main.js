@@ -30,9 +30,10 @@ let renderer,
 	camera,
 	scene,
 	opacity = 0.85,
-	lit = false,
-	thickness = 2,
+	lit = true,
+	thickness = 1.5,
 	useThickLines = true,
+	lineColor = 0xbbddff,
 	edges = {
 		ORIGINAL: false,
 		MODEL: false,
@@ -64,18 +65,44 @@ const arcad = {
 				Self.dispatch({ type: "set-up-world" });
 
 				// cylinder icosahedron cone
-				Self.dispatch({ type: "add-model", model: "dodecahedron" });
+				Self.dispatch({ type: "add-model", model: "cylinder" });
 
-				Self.dispatch({ type: "init-edges" });
-				Self.dispatch({ type: "init-background" });
-				Self.dispatch({ type: "init-conditional" });
+				Self.dispatch({ type: "init-wireframe-model" });
+				break;
+			case "add-model":
+				model = new THREE.Group();
+				
+				switch (event.model) {
+					case "cylinder":
+						geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
+						break;
+					case "torus":
+						geometry = new THREE.TorusBufferGeometry(2, .5, 8, 24);
+						break;
+					case "cone":
+						geometry = new THREE.ConeBufferGeometry(1, 2, 10);
+						break;
+					case "icosahedron":
+						geometry = new THREE.IcosahedronBufferGeometry(2, 2);
+						break;
+					case "octahedron":
+						geometry = new THREE.OctahedronBufferGeometry(2);
+						break;
+					case "dodecahedron":
+						geometry = new THREE.DodecahedronBufferGeometry(2);
+						break;
+					case "lego":
+						break;
+				}
 
-				Self.animate();
+				mesh = new THREE.Mesh(geometry);
+				model.add(mesh);
+				model.children[0].geometry.computeBoundingBox();
+				edges.ORIGINAL = model;
 				break;
 			case "set-up-world":
 				// scene
 				scene = new THREE.Scene();
-				// scene.background = new THREE.Color( 0xeeeeee );
 				
 				// camera
 				camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 2000);
@@ -104,7 +131,8 @@ const arcad = {
 				controls.maxDistance = 15;
 				controls.addEventListener("change", Self.render);
 				break;
-			case "init-edges":
+			case "init-wireframe-model":
+				// init edges model
 				edges.MODEL = edges.ORIGINAL.clone();
 				scene.add(edges.MODEL);
 
@@ -114,7 +142,7 @@ const arcad = {
 				meshes.map(mesh => {
 					let parent = mesh.parent;
 					let lineGeom = new THREE.EdgesGeometry(mesh.geometry, 40);
-					let lineMat = new THREE.LineBasicMaterial({ color: 0xaaccff });
+					let lineMat = new THREE.LineBasicMaterial({ color: lineColor });
 					let line = new THREE.LineSegments(lineGeom, lineMat);
 
 					line.position.copy(mesh.position);
@@ -122,7 +150,7 @@ const arcad = {
 					line.rotation.copy(mesh.rotation);
 
 					let thickLineGeom = new LineSegmentsGeometry().fromEdgesGeometry(lineGeom);
-					let thickLineMat = new LineMaterial({ color: 0xaaccff, linewidth: 3 });
+					let thickLineMat = new LineMaterial({ color: lineColor, linewidth: 3 });
 					let thickLines = new LineSegments2(thickLineGeom, thickLineMat);
 
 					thickLines.position.copy(mesh.position);
@@ -135,12 +163,12 @@ const arcad = {
 					parent.add(line);
 					parent.add(thickLines);
 				});
-				break;
-			case "init-background":
+				
+				// init background model
 				edges.BACKGROUND = edges.ORIGINAL.clone();
 				edges.BACKGROUND.traverse(c => {
 					if (c.isMesh) {
-						c.material = new THREE.MeshStandardMaterial({ color: 0x0066dd, roughness: 1.0 });
+						c.material = new THREE.MeshBasicMaterial({ color: 0x0066dd });
 						c.material.polygonOffset = true;
 						c.material.polygonOffsetFactor = 1;
 						c.material.polygonOffsetUnits = 1;
@@ -150,10 +178,11 @@ const arcad = {
 				});
 				scene.add(edges.BACKGROUND);
 
+				// init shadow model
 				edges.SHADOW = edges.ORIGINAL.clone();
 				edges.SHADOW.traverse(c => {
 					if (c.isMesh) {
-						c.material = new THREE.MeshBasicMaterial({ color: 0x0066dd });
+						c.material = new THREE.MeshStandardMaterial({ color: 0x0066dd, roughness: 1.0 });
 						c.material.polygonOffset = true;
 						c.material.polygonOffsetFactor = 1;
 						c.material.polygonOffsetUnits = 1;
@@ -161,8 +190,8 @@ const arcad = {
 					}
 				});
 				scene.add(edges.SHADOW);
-				break;
-			case "init-conditional":
+				
+				// init conditional model
 				edges.CONDITIONAL = edges.ORIGINAL.clone();
 				scene.add( edges.CONDITIONAL );
 				edges.CONDITIONAL.visible = false;
@@ -185,7 +214,7 @@ const arcad = {
 					let geomUtil = BufferGeometryUtils.mergeVertices( mergedGeom );
 					let lineGeom = new ConditionalEdgesGeometry( geomUtil );
 					let material = new THREE.ShaderMaterial( ConditionalEdgesShader );
-					material.uniforms.diffuse.value.set( 0xaaccff );
+					material.uniforms.diffuse.value.set( lineColor );
 
 					// Create the line segments objects and replace the mesh
 					let line = new THREE.LineSegments( lineGeom, material );
@@ -194,7 +223,7 @@ const arcad = {
 					line.rotation.copy( mesh.rotation );
 
 					let thickLineGeom = new ConditionalLineSegmentsGeometry().fromConditionalEdgesGeometry( lineGeom );
-					let thickLineMat = new ConditionalLineMaterial( { color: 0xaaccff, linewidth: 2 } );
+					let thickLineMat = new ConditionalLineMaterial( { color: lineColor, linewidth: 2 } );
 					let thickLines = new LineSegments2( thickLineGeom, thickLineMat );
 					thickLines.position.copy( mesh.position );
 					thickLines.scale.copy( mesh.scale );
@@ -204,88 +233,60 @@ const arcad = {
 					parent.add( line );
 					parent.add( thickLines );
 				});
+
+				Self.dispatch({ type: "pre-process-models" });
 				break;
-			case "add-model":
-				model = new THREE.Group();
-				//geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
-
-				switch (event.model) {
-					case "cylinder":
-						geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
-						break;
-					case "torus":
-						geometry = new THREE.TorusBufferGeometry(2, .5, 8, 24);
-						break;
-					case "cone":
-						geometry = new THREE.ConeBufferGeometry(1, 2, 10);
-						break;
-					case "icosahedron":
-						geometry = new THREE.IcosahedronBufferGeometry(2, 2);
-						break;
-					case "octahedron":
-						geometry = new THREE.OctahedronBufferGeometry(2);
-						break;
-					case "dodecahedron":
-						geometry = new THREE.DodecahedronBufferGeometry(2);
-						break;
+			case "pre-process-models":
+				if ( edges.CONDITIONAL ) {
+					edges.CONDITIONAL.visible = true;
+					edges.CONDITIONAL.traverse( c => {
+						if ( c.material && c.material.resolution ) {
+							renderer.getSize( c.material.resolution );
+							c.material.resolution.multiplyScalar( window.devicePixelRatio );
+							c.material.linewidth = thickness;
+						}
+						if ( c.material ) {
+							c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
+						}
+					} );
 				}
 
-				mesh = new THREE.Mesh(geometry);
-				model.add(mesh);
-				model.children[0].geometry.computeBoundingBox();
-				edges.ORIGINAL = model;
+				if ( edges.MODEL ) {
+					edges.MODEL.traverse( c => {
+						if ( c.material && c.material.resolution ) {
+							renderer.getSize( c.material.resolution );
+							c.material.resolution.multiplyScalar( window.devicePixelRatio );
+							c.material.linewidth = thickness;
+						}
+						if ( c.material ) {
+							c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
+						}
+					} );
+				}
+
+				if ( edges.BACKGROUND ) {
+					edges.BACKGROUND.visible = ! lit;
+					edges.BACKGROUND.traverse( c => {
+						if ( c.isMesh ) {
+							c.material.transparent = opacity !== 1.0;
+							c.material.opacity = opacity;
+						}
+					} );
+				}
+
+				if ( edges.SHADOW ) {
+					edges.SHADOW.visible = lit;
+					edges.SHADOW.traverse( c => {
+						if ( c.isMesh ) {
+							c.material.transparent = opacity !== 1.0;
+							c.material.opacity = opacity;
+						}
+					} );
+				}
+
+				Self.render();
 				break;
 		}
-	},
-	animate() {
-		if ( edges.CONDITIONAL ) {
-			edges.CONDITIONAL.visible = true;
-			edges.CONDITIONAL.traverse( c => {
-				if ( c.material && c.material.resolution ) {
-					renderer.getSize( c.material.resolution );
-					c.material.resolution.multiplyScalar( window.devicePixelRatio );
-					c.material.linewidth = thickness;
-				}
-				if ( c.material ) {
-					c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
-				}
-			} );
-		}
-
-		if ( edges.MODEL ) {
-			edges.MODEL.traverse( c => {
-				if ( c.material && c.material.resolution ) {
-					renderer.getSize( c.material.resolution );
-					c.material.resolution.multiplyScalar( window.devicePixelRatio );
-					c.material.linewidth = thickness;
-				}
-				if ( c.material ) {
-					c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
-				}
-			} );
-		}
-
-		if ( edges.BACKGROUND ) {
-			edges.BACKGROUND.visible = ! lit;
-			edges.BACKGROUND.traverse( c => {
-				if ( c.isMesh ) {
-					c.material.transparent = opacity !== 1.0;
-					c.material.opacity = opacity;
-				}
-			} );
-		}
-
-		if ( edges.SHADOW ) {
-			edges.SHADOW.visible = lit;
-			edges.SHADOW.traverse( c => {
-				if ( c.isMesh ) {
-					c.material.transparent = opacity !== 1.0;
-					c.material.opacity = opacity;
-				}
-			} );
-		}
-
-		this.render();
 	},
 	render() {
 		renderer.render(scene, camera);
