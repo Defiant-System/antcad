@@ -30,6 +30,7 @@ let renderer,
 	camera,
 	scene,
 	opacity = 0.85,
+	lit = false,
 	thickness = 2,
 	useThickLines = true,
 	edges = {
@@ -61,7 +62,9 @@ const arcad = {
 			// custom events
 			case "init-world":
 				Self.dispatch({ type: "set-up-world" });
-				Self.dispatch({ type: "add-cylinder" });
+
+				// cylinder icosahedron cone
+				Self.dispatch({ type: "add-model", model: "octahedron" });
 
 				Self.dispatch({ type: "init-edges" });
 				Self.dispatch({ type: "init-background" });
@@ -202,20 +205,36 @@ const arcad = {
 					parent.add( thickLines );
 				});
 				break;
-			case "add-cylinder":
+			case "add-model":
 				model = new THREE.Group();
-				geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
+				//geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
+
+				switch (event.model) {
+					case "cylinder":
+						geometry = new THREE.CylinderBufferGeometry(1, 1, 2, 20);
+						break;
+					case "torus":
+						geometry = new THREE.TorusBufferGeometry(2, .5, 8, 24);
+						break;
+					case "cone":
+						geometry = new THREE.ConeBufferGeometry(1, 2, 10);
+						break;
+					case "icosahedron":
+						geometry = new THREE.IcosahedronBufferGeometry(2, 2);
+						break;
+					case "octahedron":
+						geometry = new THREE.OctahedronBufferGeometry(2);
+						break;
+				}
+
 				mesh = new THREE.Mesh(geometry);
 				model.add(mesh);
 				model.children[0].geometry.computeBoundingBox();
-
 				edges.ORIGINAL = model;
 				break;
 		}
 	},
 	animate() {
-		//requestAnimationFrame( this.animate );
-
 		if ( edges.CONDITIONAL ) {
 			edges.CONDITIONAL.visible = true;
 			edges.CONDITIONAL.traverse( c => {
@@ -244,7 +263,7 @@ const arcad = {
 		}
 
 		if ( edges.BACKGROUND ) {
-			edges.BACKGROUND.visible = true;
+			edges.BACKGROUND.visible = ! lit;
 			edges.BACKGROUND.traverse( c => {
 				if ( c.isMesh ) {
 					c.material.transparent = opacity !== 1.0;
@@ -254,7 +273,7 @@ const arcad = {
 		}
 
 		if ( edges.SHADOW ) {
-			edges.SHADOW.visible = false;
+			edges.SHADOW.visible = lit;
 			edges.SHADOW.traverse( c => {
 				if ( c.isMesh ) {
 					c.material.transparent = opacity !== 1.0;
