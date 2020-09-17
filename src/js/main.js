@@ -85,7 +85,7 @@ const arcad = {
 				Self.dispatch({ type: "set-up-world" });
 
 				//Self.dispatch({ type: "add-primitive", model: "cylinder" });
-				Self.dispatch({ type: "load-model", path: "~/models/lego.obj" });
+				Self.dispatch({ type: "load-model", path: "~/models/drawer.obj" });
 
 				Self.dispatch({ type: "pre-process-models" });
 				break;
@@ -126,6 +126,8 @@ const arcad = {
 						if (child instanceof THREE.Mesh) {
 							model = new THREE.Group();
 							model.add(child);
+							model.position.set(0, -2, 0);
+
 							//model.children[0].geometry.computeBoundingBox();
 							edges.ORIGINAL = model;
 
@@ -140,7 +142,7 @@ const arcad = {
 				
 				// camera
 				camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 2000);
-				camera.position.set(1, 3, 8);
+				camera.position.set(-3, 3, 8);
 				scene.add(camera);
 				
 				// renderer
