@@ -1,0 +1,17 @@
+<CaptionToolBar>
+	<Group width="270px" class="tools-left">
+		<Options>
+			<Tool symbol="icon-previous" click="previous-model" />
+			<Tool symbol="icon-next" click="next-model" />
+		</Options>
+	</Group>
+	<Group>
+		
+	</Group>
+	<Group width="30%" class="tools-right">
+		<Tool symbol="icon-opacity" click="toggle-opacity"/>
+		<Tool symbol="icon-light" click="toggle-light" />
+		<Tool symbol="icon-line-thickness" click="line-thickness" />
+		<Tool symbol="icon-line-color" click="line-colors" />
+	</Group>
+</CaptionToolBar>

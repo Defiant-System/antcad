@@ -56,18 +56,35 @@ const arcad = {
 			material,
 			meshes,
 			mesh,
-			segments,
+			isOn,
 			el;
 
 		switch (event.type) {
 			// custom events
+			case "previous-model":
+			case "next-model":
+				break;
+			case "toggle-opacity":
+				isOn = opacity === 0.85;
+				opacity = isOn ? 1 : 0.85;
+				Self.dispatch({ type: "post-process-models" });
+				return isOn;
+			case "toggle-light":
+				isOn = lit === false;
+				lit = !lit;
+				Self.dispatch({ type: "post-process-models" });
+				return isOn;
+			case "line-thickness":
+				break;
+			case "line-colors":
+				break;
 			case "init-world":
 				Self.dispatch({ type: "set-up-world" });
 
 				// cylinder icosahedron cone
 				Self.dispatch({ type: "add-model", model: "cylinder" });
 
-				Self.dispatch({ type: "init-wireframe-model" });
+				Self.dispatch({ type: "pre-process-models" });
 				break;
 			case "add-model":
 				model = new THREE.Group();
@@ -155,7 +172,7 @@ const arcad = {
 				controls.maxDistance = 15;
 				controls.addEventListener("change", Self.render);
 				break;
-			case "init-wireframe-model":
+			case "pre-process-models":
 				// init edges model
 				edges.MODEL = edges.ORIGINAL.clone();
 				scene.add(edges.MODEL);
@@ -258,9 +275,9 @@ const arcad = {
 					parent.add(thickLines);
 				});
 
-				Self.dispatch({ type: "pre-process-models" });
+				Self.dispatch({ type: "post-process-models" });
 				break;
-			case "pre-process-models":
+			case "post-process-models":
 				if (edges.CONDITIONAL) {
 					edges.CONDITIONAL.visible = true;
 					edges.CONDITIONAL.traverse(c => {
