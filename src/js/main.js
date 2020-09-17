@@ -30,6 +30,8 @@ let renderer,
 	camera,
 	scene,
 	opacity = 0.85,
+	thickness = 2,
+	useThickLines = true,
 	edges = {
 		ORIGINAL: false,
 		MODEL: false,
@@ -87,9 +89,9 @@ const arcad = {
 				light = new THREE.AmbientLight(0xffffff);
 				scene.add(light);
 
-				light = new THREE.DirectionalLight(0xffffff, 1.0);
-				light.position.set(0, 10, 0);
-				light.target.position.set(-5, 0, 0);
+				light = new THREE.DirectionalLight(0xffffff, 0.25);
+				light.position.set(50, 50, 0);
+				//light.target.position.set(-5, 0, 0);
 				scene.add(light);
 				scene.add(light.target);
 
@@ -109,7 +111,7 @@ const arcad = {
 				meshes.map(mesh => {
 					let parent = mesh.parent;
 					let lineGeom = new THREE.EdgesGeometry(mesh.geometry, 40);
-					let lineMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+					let lineMat = new THREE.LineBasicMaterial({ color: 0xaaccff });
 					let line = new THREE.LineSegments(lineGeom, lineMat);
 
 					line.position.copy(mesh.position);
@@ -117,7 +119,7 @@ const arcad = {
 					line.rotation.copy(mesh.rotation);
 
 					let thickLineGeom = new LineSegmentsGeometry().fromEdgesGeometry(lineGeom);
-					let thickLineMat = new LineMaterial({ color: 0xffffff, linewidth: 3 });
+					let thickLineMat = new LineMaterial({ color: 0xaaccff, linewidth: 3 });
 					let thickLines = new LineSegments2(thickLineGeom, thickLineMat);
 
 					thickLines.position.copy(mesh.position);
@@ -180,7 +182,7 @@ const arcad = {
 					let geomUtil = BufferGeometryUtils.mergeVertices( mergedGeom );
 					let lineGeom = new ConditionalEdgesGeometry( geomUtil );
 					let material = new THREE.ShaderMaterial( ConditionalEdgesShader );
-					material.uniforms.diffuse.value.set( 0xffffff );
+					material.uniforms.diffuse.value.set( 0xaaccff );
 
 					// Create the line segments objects and replace the mesh
 					let line = new THREE.LineSegments( lineGeom, material );
@@ -189,7 +191,7 @@ const arcad = {
 					line.rotation.copy( mesh.rotation );
 
 					let thickLineGeom = new ConditionalLineSegmentsGeometry().fromConditionalEdgesGeometry( lineGeom );
-					let thickLineMat = new ConditionalLineMaterial( { color: 0xffffff, linewidth: 2 } );
+					let thickLineMat = new ConditionalLineMaterial( { color: 0xaaccff, linewidth: 2 } );
 					let thickLines = new LineSegments2( thickLineGeom, thickLineMat );
 					thickLines.position.copy( mesh.position );
 					thickLines.scale.copy( mesh.scale );
@@ -220,10 +222,10 @@ const arcad = {
 				if ( c.material && c.material.resolution ) {
 					renderer.getSize( c.material.resolution );
 					c.material.resolution.multiplyScalar( window.devicePixelRatio );
-					c.material.linewidth = 1;
+					c.material.linewidth = thickness;
 				}
 				if ( c.material ) {
-					c.visible = c.isLineSegments2 ? true : false;
+					c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
 				}
 			} );
 		}
@@ -233,10 +235,10 @@ const arcad = {
 				if ( c.material && c.material.resolution ) {
 					renderer.getSize( c.material.resolution );
 					c.material.resolution.multiplyScalar( window.devicePixelRatio );
-					c.material.linewidth = 1;
+					c.material.linewidth = thickness;
 				}
 				if ( c.material ) {
-					c.visible = c.isLineSegments2 ? true : false;
+					c.visible = c.isLineSegments2 ? useThickLines : ! useThickLines;
 				}
 			} );
 		}
