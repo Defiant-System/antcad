@@ -64,7 +64,7 @@ const arcad = {
 				Self.dispatch({ type: "set-up-world" });
 
 				// cylinder icosahedron cone
-				Self.dispatch({ type: "add-model", model: "octahedron" });
+				Self.dispatch({ type: "add-model", model: "dodecahedron" });
 
 				Self.dispatch({ type: "init-edges" });
 				Self.dispatch({ type: "init-background" });
@@ -224,6 +224,9 @@ const arcad = {
 						break;
 					case "octahedron":
 						geometry = new THREE.OctahedronBufferGeometry(2);
+						break;
+					case "dodecahedron":
+						geometry = new THREE.DodecahedronBufferGeometry(2);
 						break;
 				}
 
