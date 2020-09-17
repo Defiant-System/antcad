@@ -100,6 +100,30 @@ const arcad = {
 				model.children[0].geometry.computeBoundingBox();
 				edges.ORIGINAL = model;
 				break;
+			case "add-lego":
+				loader = new OBJLoader2();
+				//loader.setLogging(true, true);
+				loader.load('~/models/pipe.obj', (object) => {
+
+					// object.traverse(child => {
+					// 	if (child instanceof THREE.Mesh) {
+
+					// 		child.material = new THREE.MeshPhongMaterial({
+					// 			color: 0x0066dd,
+					// 		});
+
+					// 		geometry = new THREE.EdgesGeometry(child.geometry);
+					// 		material = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: .25 });
+					// 		wireframe = new THREE.LineSegments(geometry, material);
+							
+					// 		//child.add(wireframe);
+					// 	}
+					// });
+
+					// scene.add(object);
+					// Self.render();
+				});
+				break;
 			case "set-up-world":
 				// scene
 				scene = new THREE.Scene();
