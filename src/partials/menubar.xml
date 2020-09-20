@@ -2,12 +2,6 @@
 	<Menu name="Arcad">
 		<Menu name="About Arcad"/>
 		<Menu type="divider"/>
-		<Menu name="New Game" click="restart"/>
-		<Menu type="divider"/>
-		<Menu name="Hide Arcad"/>
-		<Menu name="Hide Others"/>
-		<Menu name="Show All" disabled="1"/>
-		<Menu type="divider"/>
 		<Menu name="Quit Arcad" shell="win -c"/>
 	</Menu>
 	<Menu name="Help">
