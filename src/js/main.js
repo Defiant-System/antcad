@@ -1,5 +1,7 @@
 
-let THREE,
+// import libs
+const {
+	THREE,
 	OrbitControls,
 	OBJLoader2,
 	BufferGeometryUtils,
@@ -9,24 +11,9 @@ let THREE,
 	ConditionalEdgesGeometry,
 	ConditionalEdgesShader,
 	ConditionalLineSegmentsGeometry,
-	ConditionalLineMaterial;
+	ConditionalLineMaterial
+} = await window.fetch("~/js/bundle.js");
 
-// import libs
-window.fetch("~/js/bundle.js").then(lib => {
-	THREE = lib.THREE;
-	OrbitControls = lib.OrbitControls;
-	OBJLoader2 = lib.OBJLoader2;
-	BufferGeometryUtils = lib.BufferGeometryUtils;
-	LineSegmentsGeometry = lib.LineSegmentsGeometry;
-	LineSegments2 = lib.LineSegments2;
-	LineMaterial = lib.LineMaterial;
-	ConditionalEdgesGeometry = lib.ConditionalEdgesGeometry;
-	ConditionalEdgesShader = lib.ConditionalEdgesShader;
-	ConditionalLineSegmentsGeometry = lib.ConditionalLineSegmentsGeometry;
-	ConditionalLineMaterial = lib.ConditionalLineMaterial;
-	// init applications
-	arcad.dispatch({ type: "init-world" });
-});
 
 let renderer,
 	camera,
@@ -49,6 +36,8 @@ const arcad = {
 	init() {
 		// fast references
 		this.content = window.find("content");
+		// init world
+		this.dispatch({ type: "init-world" });
 	},
 	dispatch(event) {
 		let Self = arcad,
