@@ -32,7 +32,7 @@ let renderer,
 	};
 
 
-const arcad = {
+const antcad = {
 	init() {
 		// fast references
 		this.content = window.find("content");
@@ -40,7 +40,7 @@ const arcad = {
 		this.dispatch({ type: "init-world" });
 	},
 	dispatch(event) {
-		let Self = arcad,
+		let Self = antcad,
 			loader,
 			light,
 			model,
@@ -316,4 +316,4 @@ const arcad = {
 	}
 };
 
-window.exports = arcad;
+window.exports = antcad;

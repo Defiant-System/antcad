@@ -1,8 +1,8 @@
 <MenuBar>
-	<Menu name="Arcad">
-		<Menu name="About Arcad"/>
+	<Menu name="AntCad">
+		<Menu name="About AntCad"/>
 		<Menu type="divider"/>
-		<Menu name="Quit Arcad" shell="win -c"/>
+		<Menu name="Quit AntCad" shell="win -c"/>
 	</Menu>
 	<Menu name="Help">
 		<Menu name="Help" click="open-help"/>
